@@ -8,8 +8,8 @@ the internal logic for that feature.
 
 ## Use Cases
 
-1. [**Creating a book**](use_cases/create_book.md)
-2. [**Generate or upload codes**](use_cases/add_codes.md)
+1. [**Creating a book**](cases/create_book.md)
+2. [**Generate or upload codes**](cases/add_codes.md)
 
 ## Database
 
