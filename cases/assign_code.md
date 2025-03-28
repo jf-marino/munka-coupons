@@ -18,6 +18,7 @@ The parameter `code` is optional. If not provided, a random code will be assigne
 ```http
 POST /coupons/assign/:code
 Content-Type: application/json
+Authorization: Bearer <token>
 
 {
   "bookId": "b123",
@@ -82,12 +83,13 @@ The code has already been assigned to another user.
 const MAX_ASSIGNMENT_ATTEMPTS = 3
 
 async function handler(request) {
+  const { partnerId } = request.jwt;
   const { code } = request.params;
   const { bookId, email } = request.body;
 
   await manager.transaction(async tx => {
     const book = await tx.findOne(CouponBook, {
-      where: { id: bookId },
+      where: { id: bookId, partnerId },
       lock: { mode: LockMode.PESSIMISTIC_READ }
     })
 

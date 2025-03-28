@@ -64,6 +64,16 @@ Authorization: Bearer <token>
 }
 ```
 
+### **400 - Book not found**
+
+Happens when the caller tries to add codes to a book that does not exist.
+
+```json
+{
+  "error": "Book not found"
+}
+```
+
 ### **400 - Failed to generate {amount} random new codes**
 
 Happens when the caller tries to generate {amount} of random
@@ -86,7 +96,19 @@ Below is the pseudo code for the request:
 
 ```typescript
 async function handler(request) {
+  const { partnerId } = request.jwt;
   const { bookId, generated, manual } = request.body;
+
+  const book = await manager.findOne(CouponBook, {
+    where: {
+      id: bookId,
+      partnerId
+    }
+  });
+
+  if (!book) {
+    throw new BadRequest({ error: 'Book not found' });
+  }
 
   let createdCodes = [];
   try {

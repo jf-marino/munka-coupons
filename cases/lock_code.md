@@ -14,6 +14,7 @@ In order to lock a coupon the user must have the coupon assigned to them.
 ```http
 POST /coupons/lock/:code
 Content-Type: application/json
+Authorization: Bearer <token>
 
 {
   "email": "user@example.com"
@@ -69,6 +70,16 @@ lock attempts are made concurrently.
 }
 ```
 
+### **400 - Coupon book not found**
+
+This error is returned if the coupon book is not found.
+
+```json
+{
+  "error": "Coupon book not found"
+}
+```
+
 ---
 
 ## Pseudo Code
@@ -77,6 +88,7 @@ lock attempts are made concurrently.
 const DEFAULT_LOCK_DURATION = 10 * 60 * 1000;
 
 async function handler(request) {
+  const { partnerId } = request.jwt;
   const { code } = request.params;
   const { email } = request.body;
 
@@ -92,7 +104,7 @@ async function handler(request) {
         });
 
       const book = await tx.findOne(CouponBook, {
-        where: { id: coupon.bookId },
+        where: { id: coupon.bookId, partnerId: partnerId },
         // In Postgres this will translate to a FOR SHARE lock, which
         // will allow concurrent redeem operations to proceed without blocking.
         // If we used a PESSIMISTIC_WRITE lock, it would block other
@@ -100,6 +112,11 @@ async function handler(request) {
         // the value they're locking in is not being modified.
         lock: { mode: LockMode.PESSIMISTIC_READ }
       });
+
+      if (!book)
+        throw new BadRequest({
+          error: 'Coupon book not found'
+        });
 
       if (book.maxRedeemCountPerUser && book.maxRedeemCountPerUser <= coupon.redeemedCount)
         throw new BadRequest({

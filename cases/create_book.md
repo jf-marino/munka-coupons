@@ -35,12 +35,14 @@ Authorization: Bearer <token>
 
 ```typescript
 async function handler(request) {
+  const { partnerId } = request.jwt;
   const { bookName, maxCodesPerUser, maxRedeemCountPerUser } = request.body;
 
   const book = new CouponBook({
     name: bookName,
     maxCodesPerUser: maxCodesPerUser,
-    maxRedeemCountPerUser: maxRedeemCountPerUser
+    maxRedeemCountPerUser: maxRedeemCountPerUser,
+    partnerId: partnerId
   });
 
   const addedBook = await book.save(tx);

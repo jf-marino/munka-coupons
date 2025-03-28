@@ -19,12 +19,10 @@ Challenge rules and spec can be found [**here**](challenge.pdf).
 
 ## Assumptions
 
-This design assumes that admin users will be authenticated using JWT tokens.
-However, it is not defined anywhere where these tokens are generated or
-validated. Some operations will require authentication and authorization
-(for example, creating a book) and others will be public (for example,
-redeeming a code). In the cases where an operation requires auth an
-`Authorization` header will be defined in the request of that operation.
+This design assumes that admin users (businesses using the service) will
+be authenticated using JWT tokens in the API Gateway layer. There is no
+auth code in the pseudo code for this reason, as it is assumed to happen
+prior to the service being called.
 
 ## Database
 
@@ -34,4 +32,25 @@ The following ERD describes the shape of the data that the use cases assume.
 
 ## Infrastructure
 
-In order to deploy the service for scalability we should follow the architecture shown below.
+The system is designed to be highly scalable and assumes the infrastructure shown below. There are some key decisions about the infrastructure that are made in this design:
+
+1. A relational PostgreSQL database is used to store the data. This is
+important, as the code assumes that ACID transactions are supported, as well
+as specific transaction isonlation levels and lock behaviors.
+
+2. The ideal configuration would be to use RDS Aurora, since it provides
+connection pooling and other features that integrate well with AWS Lambda.
+
+2. Endpoints are designed to be run on AWS Lambda (or equivalent
+serverless platforms). This will allow the system to scale extremely well.
+
+3. API Gateway is used to expose the endpoints to the outside world.
+It allows endpoints to be authenticated and to apply rate limiting,
+if needed, per partner. Also integrates with Cognito for partner authentication.
+
+4. AWS EventBridge is used to schedule the unlock process on a timer.
+
+5. The entire infrastructure is hosted within a private VPC for
+security reasons.
+
+![Infrastructure](infrastructure.png)
