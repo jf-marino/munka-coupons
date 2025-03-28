@@ -61,57 +61,65 @@ async function handler(request) {
   const { code } = request.params
   const { email } = request.body
 
-  await manager.transaction(async tx => {
-    const coupon = await tx.findOne(CouponCode, {
-      where: {
-        id: code,
-        assignedTo: email,
-        lockedUntil: LessThan(Date.now())
-      }
-    })
-
-    if (!coupon)
-      throw new NotFound({
-        message: 'User has no coupon with that code assigned'
+  try {
+    await manager.transaction(async tx => {
+      const coupon = await tx.findOne(CouponCode, {
+        where: {
+          id: code,
+          assignedTo: email,
+          lockedUntil: LessThan(Date.now())
+        }
       })
 
-    // Here we are not locking on the book, even though we probably should.
-    // This is because we only need to read the max redeem count per user,
-    // If the value of the redeem count changes while the transaction is
-    // happening, we might allow a code to be locked more times than allowed.
-    // We will assume it won't change often (there is no operation for it in
-    // the API at the moment in fact). This is simply to avoid
-    // paying the performance cost of locking the book on every code
-    // lock operation when most of the time the value is the same.
-    const book = await tx.findOne(CouponBook, {
-      where: { id: coupon.bookId }
-    });
+      if (!coupon)
+        throw new NotFound({
+          message: 'User has no coupon with that code assigned'
+        })
 
-    if (coupon.redeemedCount >= coupon.maxRedeemCount)
-      throw new BadRequest({
-        message: 'Coupon has reached its maximum redeem count per user'
+      // Here we are not locking on the book, even though we probably should.
+      // This is because we only need to read the max redeem count per user,
+      // If the value of the redeem count changes while the transaction is
+      // happening, we might allow a code to be locked more times than allowed.
+      // We will assume it won't change often (there is no operation for it in
+      // the API at the moment in fact). This is simply to avoid
+      // paying the performance cost of locking the book on every code
+      // lock operation when most of the time the value is the same.
+      const book = await tx.findOne(CouponBook, {
+        where: { id: coupon.bookId }
+      });
+
+      if (coupon.redeemedCount >= coupon.maxRedeemCount)
+        throw new BadRequest({
+          message: 'Coupon has reached its maximum redeem count per user'
+        })
+
+      const redeemedDate = new Date()
+      const log = new CouponRedeemLog({
+        couponId: coupon.id,
+        redeemedOn: redeemedDate
       })
 
-    const redeemedDate = new Date()
-    const log = new CouponRedeemLog({
-      couponId: coupon.id,
-      redeemedOn: redeemedDate
+      await tx.save(log)
+      await tx.update(
+        CouponCode,
+        { id: coupon.id },
+        {
+          redeemedCount: coupon.redeemedCount + 1,
+          lastRedeemedOn: redeemedDate,
+          lockedUntil: null
+        }
+      )
     })
 
-    await tx.save(log)
-    await tx.update(
-      CouponCode,
-      { id: coupon.id },
-      {
-        redeemedCount: coupon.redeemedCount + 1,
-        lastRedeemedOn: redeemedDate,
-        lockedUntil: null
-      }
-    )
-  })
-
-  return {
-    success: true
+    return {
+      success: true
+    }
+  } catch (error) {
+    if (error instanceof BadRequest)    throw error
+    if (error instanceof NotFound)    throw error
+    throw new BadRequest({
+      message: 'Failed to redeem coupon'
+    })
   }
 }
 ```

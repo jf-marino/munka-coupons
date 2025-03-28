@@ -58,6 +58,17 @@ already locked.
 }
 ```
 
+### **400 - Failed to lock coupon**
+
+This error is generic and it may happen when mutliple
+lock attempts are made concurrently.
+
+```json
+{
+  "error": "Failed to lock coupon"
+}
+```
+
 ---
 
 ## Pseudo Code
@@ -69,48 +80,55 @@ async function handler(request) {
   const { code } = request.params;
   const { email } = request.body;
 
-  const lockedCode = await manager.transaction(async tx => {
+  try {
+    const lockedCode = await manager.transaction(async tx => {
+      const coupon = await tx.findOne(CouponCode, {
+        where: { id: code, assignedTo: email }
+      })
 
-    const coupon = await tx.findOne(CouponCode, {
-      where: { id: code, assignedTo: email }
+      if (!coupon)
+        throw new NotFound({
+          error: 'User has no coupon with that code assigned'
+        });
+
+      // Here we are not locking on the book, even though we probably should.
+      // This is because we only need to read the max redeem count per user,
+      // If the value of the redeem count changes while the transaction is
+      // happening, we might allow a code to be locked more times than allowed.
+      // We will assume it won't change often (there is no operation for it in
+      // the API at the moment in fact). This is simply to avoid
+      // paying the performance cost of locking the book on every code
+      // lock operation when most of the time the value is the same.
+      const book = await tx.findOne(CouponBook, {
+        where: { id: coupon.bookId }
+      });
+
+      if (book.maxRedeemCountPerUser && book.maxRedeemCountPerUser <= coupon.redeemedCount)
+        throw new BadRequest({
+          error: 'Coupon has reached its maximum redeem count per user'
+        });
+
+      if (coupon.lockedUntil && coupon.lockedUntil > Date.now())
+        throw new BadRequest({
+          // This message is intentionally vague to
+          // prevent information leakage.
+          error: 'Cannot lock coupon'
+        });
+
+      // Set the lock timer to 10min.
+      // This assumes server time is UTC. A more robust approach would
+      // be to use something like luxon or moment-tz to ensure UTC is used.
+      const lockedUntil = new Date(Date.now() + DEFAULT_LOCK_DURATION);
+      return await tx.updateOne(CouponCode, { id: code }, { lockedUntil });
     })
 
-    if (!coupon)
-      throw new NotFound({
-        error: 'User has no coupon with that code assigned'
-      });
-
-    // Here we are not locking on the book, even though we probably should.
-    // This is because we only need to read the max redeem count per user,
-    // If the value of the redeem count changes while the transaction is
-    // happening, we might allow a code to be locked more times than allowed.
-    // We will assume it won't change often (there is no operation for it in
-    // the API at the moment in fact). This is simply to avoid
-    // paying the performance cost of locking the book on every code
-    // lock operation when most of the time the value is the same.
-    const book = await tx.findOne(CouponBook, {
-      where: { id: coupon.bookId }
-    });
-
-    if (book.maxRedeemCountPerUser && book.maxRedeemCountPerUser <= coupon.redeemedCount)
-      throw new BadRequest({
-        error: 'Coupon has reached its maximum redeem count per user'
-      });
-
-    if (coupon.lockedUntil && coupon.lockedUntil > Date.now())
-      throw new BadRequest({
-        // This message is intentionally vague to
-        // prevent information leakage.
-        error: 'Cannot lock coupon'
-      });
-
-    // Set the lock timer to 10min.
-    // This assumes server time is UTC. A more robust approach would
-    // be to use something like luxon or moment-tz to ensure UTC is used.
-    const lockedUntil = new Date(Date.now() + DEFAULT_LOCK_DURATION);
-    return await tx.updateOne(CouponCode, { id: code }, { lockedUntil });
-  })
-
-  return { success: true, lockedUntil: lockedCode.lockedUntil }
+    return { success: true, lockedUntil: lockedCode.lockedUntil }
+  } catch (error) {
+    if (error instanceof BadRequest) throw error
+    if (error instanceof NotFound) throw error
+    throw new BadRequest({
+      message: 'Failed to lock coupon'
+    })
+  }
 }
 ```
