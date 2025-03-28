@@ -19,7 +19,7 @@ assumptions must be taken into account when mixing both:
 
 ```http
 POST /coupons/codes
-content-type: application/json
+Content-Type: application/json
 
 {
   "bookId": "...",
@@ -45,7 +45,7 @@ content-type: application/json
 
 ## Responses
 
-### **201 Created**
+### **201 - Codes added**
 
 ```json
 {

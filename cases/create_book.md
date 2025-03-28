@@ -3,11 +3,14 @@
 Creating a coupon book can vary based on the given optional parameters. Below
 we outline the different scenarios.
 
-## Input
+---
 
-The endpoint will accept the following parameters:
+## Request
 
-```json
+```http
+POST /coupons
+Content-Type: application/json
+
 {
   "bookName": "summer_discount",
   "maxCodesPerUser": 5,
@@ -15,10 +18,21 @@ The endpoint will accept the following parameters:
 }
 ```
 
-## Logic
+## Responses
+
+### **201 - Book created successfully**
+
+```json
+{
+  "bookId": "1234567890",
+}
+```
+
+---
+
+## Pseudo Code
 
 ```typescript
-// Received parameter
 async function handler(request) {
   const { bookName, maxCodesPerUser, maxRedeemCountPerUser } = request.body;
 
@@ -32,13 +46,5 @@ async function handler(request) {
   return {
     bookId: addedBook.id
   }
-}
-```
-
-## Output
-
-```json
-{
-  "bookId": "1234567890",
 }
 ```

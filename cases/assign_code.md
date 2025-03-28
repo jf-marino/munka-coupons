@@ -16,13 +16,12 @@ In both cases, in order for the system to assign a code to a user, the user must
 The parameter `code` is optional. If not provided, a random code will be assigned.
 
 ```http
-POST /coupons/assign
-content-type: application/json
+POST /coupons/assign/:code
+Content-Type: application/json
 
 {
   "bookId": "b123",
   "email": "user@example.com",
-  "code": "ABC123"
 }
 ```
 
@@ -80,8 +79,11 @@ The code has already been assigned to another user.
 ## Pseudo Code
 
 ```typescript
+const MAX_ASSIGNMENT_ATTEMPTS = 3
+
 async function handler(request) {
-  const { bookId, email, code } = request.body;
+  const { code } = request.params;
+  const { bookId, email } = request.body;
 
   await manager.transaction(async tx => {
     const book = tx.find(CouponBook, { where: { id: bookId }})
@@ -98,7 +100,8 @@ async function handler(request) {
 
     if (code) {
       const selectedCode = await tx.find(CouponCode, {
-        where: { bookId, code }
+        where: { bookId, code },
+        lock: { mode: LockMode.PESSIMISTIC_WRITE }
       })
       if (!selectedCode) throw new NotFound()
       if (selectedCode.assignedTo)
@@ -109,27 +112,39 @@ async function handler(request) {
 
     // ------ [ random assignment below ] -------
 
-    const freeCodes = await tx.find(CouponCode, {
-      where: { bookId, assignedTo: IsNull() }
-    })
-
-    if (!freeCodes.length)
-      throw new BadRequest({
-        error: 'No available codes left in the book.'
-      })
 
     // Pick a random code from the list of available codes.
     // This operation may still fail if two or more users try
     // to assign the same code at the same time.
-    const randomPick = Math.floor(
-      Math.random() * freeCodes.length
-    )
-    const codeToAssign = freeCodes[randomPick]
-    codeToAssign.assignedTo = email
+    let attempts = 0;
+    do {
+      try {
+        const freeCodes = await tx.find(CouponCode, {
+          where: { bookId, assignedTo: IsNull() }
+        })
 
-    const assignedCode = await tx.save(codeToAssign)
+        if (!freeCodes.length)
+          throw new BadRequest({
+            error: 'No available codes left in the book.'
+          })
 
-    return { assigned: true, code: assignedCode.code }
+        const randomPick = Math.floor(
+          Math.random() * freeCodes.length
+        )
+        const codeToAssign = freeCodes[randomPick]
+        codeToAssign.assignedTo = email
+
+        const assignedCode = await tx.save(codeToAssign)
+
+        return { assigned: true, code: assignedCode.code }
+      } catch (error) {
+        // Just log the error and retry. Not much to do here
+        // but its a bad practice to ignore errors.
+        console.error(error)
+      } finally {
+        attempts++
+      }
+    } while (attempts < MAX_ASSIGNMENT_ATTEMPTS)
   })
 }
 ```
