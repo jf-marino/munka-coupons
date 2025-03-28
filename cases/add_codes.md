@@ -1,4 +1,4 @@
-# Add Codes to a Book
+# Use Case: Add Codes to a Book
 
 Adding codes to a book can be done in two ways:
 
@@ -13,9 +13,9 @@ assumptions must be taken into account when mixing both:
 1. Manually entered codes will be committed first, and auto generated codes after. This ensures that the codes are unique and that the auto-generated codes do not collide with the manually entered codes.
 2. If the manually entered code fails (because one or more had collisions), the entire request will fail.
 
-## Endpoint Request/Response
+---
 
-### Request
+## Request
 
 ```http
 POST /coupons/codes
@@ -43,9 +43,9 @@ content-type: application/json
 }
 ```
 
-### Responses
+## Responses
 
-#### 201 Created
+### **201 Created**
 
 ```json
 {
@@ -63,7 +63,19 @@ content-type: application/json
 }
 ```
 
+### **400 - Failed to generate {amount} random new codes**
 
+Happens when the caller tries to generate {amount} of random
+new codes but, after attempting multiple times the system is
+unable to generate enough new codes. This will have higher
+likelihood of happening when the length of the code is too
+short for the amount of codes requested in the book.
+
+```json
+{
+  "error": "Failed to generate 100 random new codes"
+}
+```
 
 ---
 
@@ -72,7 +84,7 @@ content-type: application/json
 Below is the pseudo code for the request:
 
 ```typescript
-function handler(request) {
+async function handler(request) {
   const { bookId, generated, manual } = request.body;
 
   let createdCodes = [];
@@ -90,6 +102,7 @@ function handler(request) {
     if (generated) {
       // Method `autoGenerateCodes` defined in a section below.
       const generatedCodes = await autoGenerateCodes({
+        bookId,
         amount: generated.amount,
         prefix: generated.prefix,
         codeLength: generated.codeLength,
@@ -124,6 +137,7 @@ const MAX_GENERATION_ATTEMPTS = 5;
 
 function autoGenerateCodes(params) {
   const {
+    bookId,
     amount,
     prefix,
     codeLength = DEFAULT_GENERATED_CODE_LENGTH,
@@ -137,7 +151,7 @@ function autoGenerateCodes(params) {
     let codes = [];
     do {
       let codes = range(0, amount - codes.length).map(i => ({
-        code: `${prefix}-${generateCode(codeLength)}`,
+        code: `${prefix ? prefix + '-' : ''}${generateCode(codeLength)}`,
         expiration,
       }));
 
@@ -167,6 +181,8 @@ function autoGenerateCodes(params) {
 }
 
 const generateCode = (length: number) => {
+  // This alphabet should allow (48^length) code permutations. For a
+  // default of 4 characters, there are 48^4 = 5,308,416 possible codes.
   const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjklmnpqrstuvwxyz';
   return Array.from({ length }, () => {
     return chars[Math.floor(Math.random() * chars.length)]

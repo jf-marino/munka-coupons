@@ -19,7 +19,7 @@ The endpoint will accept the following parameters:
 
 ```typescript
 // Received parameter
-function handler(request) {
+async function handler(request) {
   const { bookName, maxCodesPerUser, maxRedeemCountPerUser } = request.body;
 
   const book = new CouponBook({
