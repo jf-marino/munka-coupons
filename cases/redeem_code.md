@@ -76,16 +76,14 @@ async function handler(request) {
           message: 'User has no coupon with that code assigned'
         })
 
-      // Here we are not locking on the book, even though we probably should.
-      // This is because we only need to read the max redeem count per user,
-      // If the value of the redeem count changes while the transaction is
-      // happening, we might allow a code to be locked more times than allowed.
-      // We will assume it won't change often (there is no operation for it in
-      // the API at the moment in fact). This is simply to avoid
-      // paying the performance cost of locking the book on every code
-      // lock operation when most of the time the value is the same.
       const book = await tx.findOne(CouponBook, {
-        where: { id: coupon.bookId }
+        where: { id: coupon.bookId },
+        // In Postgres this will translate to a FOR SHARE lock, which
+        // will allow concurrent redeem operations to proceed without blocking.
+        // If we used a PESSIMISTIC_WRITE lock, it would block other
+        // transactions from locking or redeeming codes, even though
+        // the value they're locking in is not being modified.
+        lock: { mode: LockMode.PESSIMISTIC_READ }
       });
 
       if (coupon.redeemedCount >= coupon.maxRedeemCount)

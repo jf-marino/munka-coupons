@@ -86,7 +86,11 @@ async function handler(request) {
   const { bookId, email } = request.body;
 
   await manager.transaction(async tx => {
-    const book = tx.find(CouponBook, { where: { id: bookId }})
+    const book = await tx.findOne(CouponBook, {
+      where: { id: bookId },
+      lock: { mode: LockMode.PESSIMISTIC_READ }
+    })
+
     if (!book) throw new BadRequest({ error: 'Book not found' })
 
     const codesForUser = await tx.find(CouponCode, {
