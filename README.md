@@ -36,21 +36,25 @@ The system is designed to be highly scalable and assumes the infrastructure show
 
 1. A relational PostgreSQL database is used to store the data. This is
 important, as the code assumes that ACID transactions are supported, as well
-as specific transaction isonlation levels and lock behaviors.
+as specific transaction isolation levels and lock behaviors.
 
-2. The ideal configuration would be to use RDS Aurora, since it provides
+2. The ideal configuration would be to use RDS Aurora with the Postgres
+compatibility layer, instead of standard Postgres, since it provides
 connection pooling and other features that integrate well with AWS Lambda.
 
-2. Endpoints are designed to be run on AWS Lambda (or equivalent
+3. Endpoints are designed to be run on AWS Lambda (or equivalent
 serverless platforms). This will allow the system to scale extremely well.
 
-3. API Gateway is used to expose the endpoints to the outside world.
+4. API Gateway is used to expose the endpoints to the outside world.
 It allows endpoints to be authenticated and to apply rate limiting,
-if needed, per partner. Also integrates with Cognito for partner authentication.
+if needed, per partner.
 
-4. AWS EventBridge is used to schedule the unlock process on a timer.
+5. Cognito is used to manage user authentication and authorization, in
+combination with API Gateway.
 
-5. The entire infrastructure is hosted within a private VPC for
+6. AWS EventBridge is used to schedule the unlock process on a timer.
+
+7. The entire infrastructure is hosted within a private VPC for
 security reasons.
 
 ![Infrastructure](infrastructure.png)
