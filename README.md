@@ -15,6 +15,7 @@ Challenge rules and spec can be found [**here**](challenge.pdf).
 3. [**Assigning codes**](cases/assign_code.md)
 4. [**Locking codes**](cases/lock_code.md)
 5. [**Unlocking codes**](cases/unlock_codes.md)
+6. [**Redeeming codes**](cases/redeem_code.md)
 
 ## Database
 

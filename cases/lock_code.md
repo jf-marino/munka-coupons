@@ -39,11 +39,11 @@ Content-Type: application/json
 }
 ```
 
-### **400 - Coupon book has reached its maximum redeem count per user**
+### **400 - Coupon has reached its maximum redeem count per user**
 
 ```json
 {
-  "error": "Coupon book has reached its maximum redeem count per user"
+  "error": "Coupon has reached its maximum redeem count per user"
 }
 ```
 
@@ -94,7 +94,7 @@ async function handler(request) {
 
     if (book.maxRedeemCountPerUser && book.maxRedeemCountPerUser <= coupon.redeemedCount)
       throw new BadRequest({
-        error: 'Coupon book has reached its maximum redeem count per user'
+        error: 'Coupon has reached its maximum redeem count per user'
       });
 
     if (coupon.lockedUntil && coupon.lockedUntil > Date.now())
