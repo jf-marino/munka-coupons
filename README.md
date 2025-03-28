@@ -6,10 +6,13 @@ Each one outlines a feature of the service, and includes API endpoint
 (request/response) definitions as well as pseudo code describing
 the internal logic for that feature.
 
+[**Problem description**](challenge.pdf)
+
 ## Use Cases
 
 1. [**Creating a book**](cases/create_book.md)
 2. [**Generate or upload codes**](cases/add_codes.md)
+3. [**Assigning codes**](cases/assign_code.md)
 
 ## Database
 
