@@ -20,6 +20,7 @@ assumptions must be taken into account when mixing both:
 ```http
 POST /coupons/codes
 Content-Type: application/json
+Authorization: Bearer <token>
 
 {
   "bookId": "...",

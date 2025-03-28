@@ -10,6 +10,7 @@ we outline the different scenarios.
 ```http
 POST /coupons
 Content-Type: application/json
+Authorization: Bearer <token>
 
 {
   "bookName": "summer_discount",

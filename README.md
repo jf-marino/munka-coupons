@@ -17,6 +17,15 @@ Challenge rules and spec can be found [**here**](challenge.pdf).
 5. [**Unlocking codes**](cases/unlock_codes.md)
 6. [**Redeeming codes**](cases/redeem_code.md)
 
+## Assumptions
+
+This design assumes that admin users will be authenticated using JWT tokens.
+However, it is not defined anywhere where these tokens are generated or
+validated. Some operations will require authentication and authorization
+(for example, creating a book) and others will be public (for example,
+redeeming a code). In the cases where an operation requires auth an
+`Authorization` header will be defined in the request of that operation.
+
 ## Database
 
 The following ERD describes the shape of the data that the use cases assume.

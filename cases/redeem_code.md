@@ -94,6 +94,9 @@ async function handler(request) {
         })
 
       const redeemedDate = new Date()
+      // The log is not really required, however, it is useful in real
+      // world applications to track the history of coupon usage as well as
+      // to provide a record of the redemption for auditing purposes.
       const log = new CouponRedeemLog({
         couponId: coupon.id,
         redeemedOn: redeemedDate
