@@ -21,6 +21,8 @@ Challenge rules and spec can be found [**here**](challenge.pdf).
 
 The following ERD describes the shape of the data that the use cases assume.
 
+![Database ERD](erd.png)
+
 ## Infrastructure
 
 In order to deploy the service for scalability we should follow the architecture shown below.
